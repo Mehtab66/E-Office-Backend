@@ -1,7 +1,11 @@
-const User = require("./models/user");
-const { validateUser, validateUpdateUser } = require("./validators");
+const User = require("../models/employee.model");
+const bcrypt = require("bcrypt");
 
-// Create a new user
+const {
+  validateUser,
+  validateUpdateUser,
+} = require("../validators/employee.validator");
+
 const createUser = async (req, res) => {
   try {
     const { error } = validateUser(req.body);
@@ -9,7 +13,16 @@ const createUser = async (req, res) => {
       return res.status(400).json({ message: error.details[0].message });
     }
 
-    const { name, email, phone, grade, designation, cnic } = req.body;
+    const {
+      name,
+      email,
+      phone,
+      grade,
+      designation,
+      department,
+      cnic,
+      password,
+    } = req.body;
 
     // Check if user already exists by email or CNIC
     const existingUser = await User.findOne({ $or: [{ email }, { cnic }] });
@@ -22,6 +35,10 @@ const createUser = async (req, res) => {
       });
     }
 
+    // Hash the password
+    const saltRounds = 10;
+    const hashedPassword = await bcrypt.hash(password, saltRounds);
+
     // Create new user
     const user = new User({
       name,
@@ -29,12 +46,18 @@ const createUser = async (req, res) => {
       phone,
       grade,
       designation,
+      department,
       cnic,
+      password: hashedPassword,
     });
-
+    console.log("New user data:", user);
     await user.save();
 
-    res.status(201).json({ message: "User created successfully", user });
+    // Return user data without the password
+    const { password: _, ...userResponse } = user.toObject();
+    res
+      .status(201)
+      .json({ message: "User created successfully", user: userResponse });
   } catch (error) {
     console.error("Error creating user:", error);
     res.status(500).json({ message: "Server error" });
@@ -43,6 +66,7 @@ const createUser = async (req, res) => {
 
 // Get all users with optional search and pagination
 const getUsers = async (req, res) => {
+  console.log("into the get users");
   try {
     const { search = "", page = 1, limit = 3 } = req.query;
     const query = {
@@ -76,13 +100,25 @@ const getUsers = async (req, res) => {
 // Update a user
 const updateUser = async (req, res) => {
   try {
+    console.log("into the update user");
     const { id } = req.params;
+    console.log("User ID to update:", id);
+    console.log("Request body:", req.body);
     const { error } = validateUpdateUser(req.body);
     if (error) {
       return res.status(400).json({ message: error.details[0].message });
     }
 
-    const { name, email, phone, grade, designation, cnic } = req.body;
+    const {
+      name,
+      email,
+      phone,
+      grade,
+      designation,
+      department,
+      cnic,
+      password,
+    } = req.body;
 
     // Check if email or CNIC is taken by another user
     const existingUser = await User.findOne({
@@ -98,17 +134,37 @@ const updateUser = async (req, res) => {
       });
     }
 
-    const user = await User.findByIdAndUpdate(
-      id,
-      { name, email, phone, grade, designation, cnic },
-      { new: true }
-    );
+    // Build update object dynamically
+    const updateData = {
+      name,
+      email,
+      phone,
+      grade,
+      designation,
+      department,
+      cnic,
+    };
+
+    // Hash password if provided
+    if (password) {
+      const saltRounds = 10;
+      updateData.password = await bcrypt.hash(password, saltRounds);
+    }
+
+    const user = await User.findByIdAndUpdate(id, updateData, {
+      new: true,
+      runValidators: true,
+    });
 
     if (!user) {
       return res.status(404).json({ message: "User not found" });
     }
 
-    res.status(200).json({ message: "User updated successfully", user });
+    // Return user data without the password
+    const { password: _, ...userResponse } = user.toObject();
+    res
+      .status(200)
+      .json({ message: "User updated successfully", user: userResponse });
   } catch (error) {
     console.error("Error updating user:", error);
     res.status(500).json({ message: "Server error" });
@@ -132,4 +188,39 @@ const deleteUser = async (req, res) => {
   }
 };
 
-module.exports = { createUser, getUsers, updateUser, deleteUser };
+const getDashboardStats = async (req, res) => {
+  try {
+    // Aggregate data for designations and departments
+    const stats = await User.aggregate([
+      {
+        // Group by designation to count users per designation
+        $group: {
+          _id: "$designation",
+          count: { $sum: 1 },
+        },
+      },
+      {
+        // Project to format the output
+        $project: {
+          name: "$_id",
+          value: "$count",
+          _id: 0,
+        },
+      },
+    ]);
+
+    // Get total users and unique departments
+    const totalUsers = await User.countDocuments();
+    const uniqueDepartments = await User.distinct("department");
+
+    res.status(200).json({
+      totalUsers,
+      designations: stats,
+      totalDepartments: uniqueDepartments.length,
+    });
+  } catch (error) {
+    console.error("Error fetching dashboard stats:", error);
+    res.status(500).json({ message: "Server error" });
+  }
+};
+module.exports = { createUser, getUsers, updateUser, deleteUser, getDashboardStats };
