@@ -18,16 +18,14 @@ const login = async (req, res) => {
 
     // Check if user is an admin
     let user = await Admin.findOne({ email });
-    let role = "admin"; // Used for JWT
+    let role = "Admin"; // Capitalize
     let isAdmin = true;
-    let designation = "Admin"; // For response
 
     // If not admin, check employee
     if (!user) {
       user = await Employee.findOne({ email });
       isAdmin = false;
-      role = user?.designation === "Manager" ? "manager" : "employee";
-      designation = user?.designation || "Employee"; // Fallback to "Employee" if needed
+      role = user?.designation === "Manager" ? "manager" : "employee"; // Capitalize
     }
 
     // Validate credentials
@@ -38,13 +36,12 @@ const login = async (req, res) => {
     // Generate JWT
     const token = jwt.sign(
       { id: user._id, role, isAdmin },
-      process.env.JWT_SECRET,
-      { expiresIn: "1h" }
+      process.env.JWT_SECRET
     );
 
     // Prepare response
     const userData = isAdmin
-      ? { _id: user._id, email: user.email, designation }
+      ? { _id: user._id, email: user.email, role }
       : {
           _id: user._id,
           email: user.email,
@@ -53,6 +50,7 @@ const login = async (req, res) => {
           phone: user.phone,
           grade: user.grade,
           cnic: user.cnic,
+          role: user.role,
         };
 
     res.json({ user: userData, token });
