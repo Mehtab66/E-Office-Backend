@@ -10,6 +10,11 @@ const userSchema = new mongoose.Schema(
     designation: { type: String, required: true },
     department: { type: String, required: true },
     cnic: { type: String, required: true, unique: true },
+    role: {
+      type: String,
+      enum: ["employee", "manager"],
+      default: "employee",
+    },
   },
   { timestamps: true }
 );

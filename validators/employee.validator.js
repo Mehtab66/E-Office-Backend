@@ -52,6 +52,12 @@ const validateUser = (data) => {
           "Password must be at least 8 characters long and include at least one uppercase letter, one lowercase letter, one number, and one special character",
         "any.required": "Password is required",
       }),
+    role: Joi.string()
+      .valid("employee", "manager") // 👈 allow role on create
+      .default("employee")
+      .messages({
+        "any.only": "Role must be either 'employee' or 'manager'",
+      }),
   });
 
   return schema.validate(data, { abortEarly: false });
@@ -108,6 +114,13 @@ const validateUpdateUser = (data) => {
       .messages({
         "string.pattern.base":
           "Password must be at least 8 characters long and include at least one uppercase letter, one lowercase letter, one number, and one special character",
+      }),
+    role: Joi.string()
+      .valid("employee", "manager")
+      .required()
+      .messages({
+        "any.only": "Role must be either 'employee' or 'manager'",
+        "any.required": "Role is required",
       }),
   });
 

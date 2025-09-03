@@ -22,6 +22,7 @@ const createUser = async (req, res) => {
       department,
       cnic,
       password,
+      role
     } = req.body;
 
     // Check if user already exists by email or CNIC
@@ -49,6 +50,7 @@ const createUser = async (req, res) => {
       department,
       cnic,
       password: hashedPassword,
+      role
     });
     console.log("New user data:", user);
     await user.save();
@@ -64,22 +66,27 @@ const createUser = async (req, res) => {
   }
 };
 
-// Get all users with optional search and pagination
 const getUsers = async (req, res) => {
-  console.log("into the get users");
   try {
-    const { search = "", page = 1, limit = 3 } = req.query;
+    const {
+      search = "",
+      page = 1,
+      limit = 10,
+      sort = "-createdAt",
+    } = req.query;
     const query = {
       $or: [
         { name: { $regex: search, $options: "i" } },
         { email: { $regex: search, $options: "i" } },
         { designation: { $regex: search, $options: "i" } },
+        { department: { $regex: search, $options: "i" } },
       ],
     };
 
     const users = await User.find(query)
       .skip((page - 1) * limit)
       .limit(parseInt(limit))
+      .sort(sort)
       .lean();
 
     const total = await User.countDocuments(query);
