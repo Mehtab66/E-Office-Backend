@@ -15,6 +15,7 @@ const userSchema = new mongoose.Schema(
       enum: ["employee", "manager"],
       default: "employee",
     },
+    projects: [{ type: mongoose.Schema.Types.ObjectId, ref: "Project" }], // Assigned projects
   },
   { timestamps: true }
 );

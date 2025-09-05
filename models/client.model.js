@@ -9,8 +9,16 @@ const clientSchema = new mongoose.Schema(
     currency: { type: String, required: true },
     billingAddress: { type: String, required: true },
     shippingAddress: { type: String, required: true },
+    projects: [{ type: mongoose.Schema.Types.ObjectId, ref: "Project" }],
+    createdBy: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: "User",
+      required: true,
+    },
   },
   { timestamps: true }
 );
+
+clientSchema.index({ email: 1 });
 
 module.exports = mongoose.model("Client", clientSchema);

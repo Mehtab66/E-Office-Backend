@@ -25,7 +25,7 @@ const login = async (req, res) => {
     if (!user) {
       user = await Employee.findOne({ email });
       isAdmin = false;
-      role = user?.designation === "Manager" ? "manager" : "employee"; // Capitalize
+      role = user?.designation; // Capitalize
     }
 
     // Validate credentials

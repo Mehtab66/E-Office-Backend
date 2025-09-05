@@ -8,9 +8,15 @@ var logger = require("morgan");
 const db = require("./config/db");
 var indexRouter = require("./routes/index");
 var usersRouter = require("./routes/users");
-var managerRouter = require("./routes/manager.route");
 var adminRouter = require("./routes/admin.route");
 const authRoutes = require("./routes/auth.route");
+const clientRoutes = require("./routes/client.route");
+const projectRoutes = require("./routes/project.route");
+const taskRoutes = require("./routes/task.route");
+const timeEntryRoutes = require("./routes/timeEntry.route");
+const deliverableRoutes = require("./routes/deliverable.route");
+const managerRoutes = require("./routes/manager.route"); // <-- manager
+
 const cors = require("cors");
 
 var app = express();
@@ -29,9 +35,14 @@ app.use(cors());
 
 app.use("/", indexRouter);
 app.use("/users", usersRouter);
-app.use("/manager", managerRouter);
 app.use("/admin", adminRouter);
 app.use("/auth", authRoutes);
+app.use("/api/clients", clientRoutes);
+app.use("/api/projects", projectRoutes);
+app.use("/api/projects/:projectId/tasks", taskRoutes);
+app.use("/api/projects/:projectId/time-entries", timeEntryRoutes);
+app.use("/api/projects/:projectId/deliverables", deliverableRoutes);
+app.use("/manager", managerRoutes); // manager routes
 
 // catch 404 and forward to error handler
 app.use(function (req, res, next) {

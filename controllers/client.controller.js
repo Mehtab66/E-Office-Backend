@@ -1,51 +1,66 @@
 const Client = require("../models/client.model");
-const { validateClient } = require("../validators/client.validator");
 
-// Controller to add a new client
-const addClient = async (req, res) => {
+const createClient = async (req, res, next) => {
   try {
-    // Validate request body
-    const { error } = validateClient(req.body);
-    if (error) {
-      return res.status(400).json({ message: error.details[0].message });
-    }
-
-    const {
-      name,
-      email,
-      phone,
-      country,
-      currency,
-      billingAddress,
-      shippingAddress,
-    } = req.body;
-
-    // Check if client already exists
-    const existingClient = await Client.findOne({ email });
-    if (existingClient) {
-      return res
-        .status(400)
-        .json({ message: "Client with this email already exists" });
-    }
-
-    // Create new client
-    const client = new Client({
-      name,
-      email,
-      phone,
-      country,
-      currency,
-      billingAddress,
-      shippingAddress,
-    });
-
-    await client.save();
-
-    res.status(201).json({ message: "Client added successfully", client });
-  } catch (error) {
-    console.error("Error adding client:", error);
-    res.status(500).json({ message: "Server error" });
+    const client = await Client.create({ ...req.body, createdBy: req.user.id });
+    res.status(201).json(client);
+  } catch (err) {
+    console.log(err);
+    next(err);
   }
 };
 
-module.exports = { addClient };
+const getClients = async (req, res, next) => {
+  try {
+    const { page = 1, limit = 20 } = req.query;
+    const clients = await Client.find()
+      .populate("projects")
+      .limit(limit * 1)
+      .skip((page - 1) * limit)
+      .exec();
+    res.json(clients);
+  } catch (err) {
+    next(err);
+  }
+};
+
+const getClient = async (req, res, next) => {
+  try {
+    const client = await Client.findById(req.params.id).populate("projects");
+    if (!client) return res.status(404).json({ error: "Client not found" });
+    res.json(client);
+  } catch (err) {
+    next(err);
+  }
+};
+
+const updateClient = async (req, res, next) => {
+  try {
+    const client = await Client.findByIdAndUpdate(req.params.id, req.body, {
+      new: true,
+      runValidators: true,
+    });
+    if (!client) return res.status(404).json({ error: "Client not found" });
+    res.json(client);
+  } catch (err) {
+    next(err);
+  }
+};
+
+const deleteClient = async (req, res, next) => {
+  try {
+    const client = await Client.findByIdAndDelete(req.params.id);
+    if (!client) return res.status(404).json({ error: "Client not found" });
+    res.json({ message: "Client deleted" });
+  } catch (err) {
+    next(err);
+  }
+};
+
+module.exports = {
+  createClient,
+  getClients,
+  getClient,
+  updateClient,
+  deleteClient,
+};

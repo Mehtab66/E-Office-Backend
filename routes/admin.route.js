@@ -14,7 +14,7 @@ const router = express.Router();
 router.post("/AddEmployee", authMiddleware(["Admin"]), createUser);
 
 // Get all users (with optional search and pagination)
-router.get("/GetEmployees", authMiddleware(["Admin"]), getUsers);
+router.get("/GetEmployees", authMiddleware(["Admin","manager"]), getUsers);
 
 // Update a user
 router.patch("/UpdateEmployee/:id", authMiddleware(["Admin"]), updateUser);
