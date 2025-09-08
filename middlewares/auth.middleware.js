@@ -26,9 +26,15 @@ const authMiddleware = (allowedRoles) => {
       console.log("Decoded token:", decoded); // Debug: Log decoded payload
       req.user = decoded; // Contains { id, role, isAdmin }
 
+      // Normalize roles to lowercase for case-insensitive comparison
+      const userRole = decoded.role.toLowerCase();
+      const normalizedAllowedRoles = Array.isArray(allowedRoles)
+        ? allowedRoles.map((role) => role.toLowerCase())
+        : [];
+
       if (
         !Array.isArray(allowedRoles) ||
-        !allowedRoles.includes(decoded.role)
+        !normalizedAllowedRoles.includes(userRole)
       ) {
         console.log(
           "Access denied: Role",

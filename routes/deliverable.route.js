@@ -12,13 +12,13 @@ const router = express.Router({ mergeParams: true });
 
 router
   .route("/")
-  .post(authMiddleware(["manager", "team_lead"]), createDeliverable)
-  .get(authMiddleware(["manager", "team_lead"]), getDeliverables);
+  .post(authMiddleware(["manager", "employee"]), createDeliverable)
+  .get(authMiddleware(["manager", "employee"]), getDeliverables);
 
 router
   .route("/:deliverableId")
-  .get(authMiddleware(["manager", "team_lead"]), getDeliverable)
-  .put(authMiddleware(["manager", "team_lead"]), updateDeliverable)
-  .delete(authMiddleware(["manager", "team_lead"]), deleteDeliverable);
+  .get(authMiddleware(["manager", "employee"]), getDeliverable)
+  .put(authMiddleware(["manager", "employee"]), updateDeliverable)
+  .delete(authMiddleware(["manager", "employee"]), deleteDeliverable);
 
 module.exports = router; // ✅ correct
