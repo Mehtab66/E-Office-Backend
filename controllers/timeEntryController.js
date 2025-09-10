@@ -29,6 +29,7 @@ const createTimeEntry = async (req, res, next) => {
 };
 
 const getTimeEntries = async (req, res, next) => {
+  console.log("Fetching time entries for project:");
   try {
     const project = await Project.findById(req.params.projectId);
     if (!project) return res.status(404).json({ error: "Project not found" });
@@ -127,10 +128,37 @@ const deleteTimeEntry = async (req, res, next) => {
   }
 };
 
+const getAllTimeEntries = async (req, res) => {
+  const userId = req.user.id;
+  const { projectId, dateFrom, dateTo, page = 1, limit = 20 } = req.query;
+
+  const query = { user: userId };
+  if (projectId) query.project = projectId;
+  if (dateFrom || dateTo) {
+    query.date = {};
+    if (dateFrom) query.date.$gte = new Date(dateFrom);
+    if (dateTo) query.date.$lte = new Date(dateTo);
+  }
+
+  const timeEntries = await TimeEntry.find(query)
+    .populate("project", "name")
+    .populate("user", "name")
+    .skip((page - 1) * limit)
+    .limit(Number(limit))
+    .lean();
+
+  const total = await TimeEntry.countDocuments(query);
+
+  res.status(200).json({
+    timeEntries,
+    pagination: { page: Number(page), limit: Number(limit), total },
+  });
+};
 module.exports = {
   createTimeEntry,
   getTimeEntries,
   getTimeEntry,
   updateTimeEntry,
   deleteTimeEntry,
+  getAllTimeEntries,
 };

@@ -25,7 +25,7 @@ const login = async (req, res) => {
     if (!user) {
       user = await Employee.findOne({ email });
       isAdmin = false;
-      role = user?.designation; // Capitalize
+      role = user?.role; // Capitalize
     }
 
     // Validate credentials
@@ -89,4 +89,27 @@ const updatePassword = async (req, res) => {
   }
 };
 
-module.exports = { login, updatePassword };
+const getCurrentUser = async (req, res, next) => {
+  try {
+    const user = await Employee.findById(req.user.id).select(
+      "_id name email role designation phone grade cnic projects"
+    );
+    if (!user) {
+      return res.status(404).json({ message: "User not found" });
+    }
+    res.json({
+      id: user._id,
+      name: user.name,
+      email: user.email,
+      role: user.role,
+      designation: user.designation,
+      phone: user.phone,
+      grade: user.grade,
+      cnic: user.cnic,
+      projects: user.projects,
+    });
+  } catch (err) {
+    next(err);
+  }
+};
+module.exports = { login, updatePassword, getCurrentUser };

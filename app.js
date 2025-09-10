@@ -16,7 +16,7 @@ const taskRoutes = require("./routes/task.route");
 const timeEntryRoutes = require("./routes/timeEntry.route");
 const deliverableRoutes = require("./routes/deliverable.route");
 const managerRoutes = require("./routes/manager.route"); // <-- manager
-
+const employeeRoutes = require("./routes/employee.route");
 const cors = require("cors");
 
 var app = express();
@@ -43,6 +43,7 @@ app.use("/api/projects/:projectId/tasks", taskRoutes);
 app.use("/api/projects/:projectId/time-entries", timeEntryRoutes);
 app.use("/api/projects/:projectId/deliverables", deliverableRoutes);
 app.use("/manager", managerRoutes); // manager routes
+app.use("/employee", employeeRoutes); // employee routes
 
 // catch 404 and forward to error handler
 app.use(function (req, res, next) {

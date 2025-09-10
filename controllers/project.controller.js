@@ -1,6 +1,8 @@
 const Project = require("../models/project.model");
 const Client = require("../models/client.model");
 const User = require("../models/employee.model");
+const TimeEntry = require("../models/timeEntry.model");
+const Task = require("../models/task.model");
 const { validateProject } = require("../validators/project.validator");
 
 const addProject = async (req, res, next) => {
@@ -55,16 +57,43 @@ const addProject = async (req, res, next) => {
 const getProjects = async (req, res, next) => {
   try {
     const { page = 1, limit = 20 } = req.query;
+
+    // Debug log to see the actual role value
+    console.log("User role from request:", req.user.role);
+    console.log("User role type:", typeof req.user.role);
+
+    // Case-insensitive role check
     const query =
-      req.user.role === "manager"
+      req.user.role?.toLowerCase() === "manager"
         ? {}
         : { $or: [{ teamLead: req.user.id }, { teamMembers: req.user.id }] };
+
+    console.log("Final query being used:", JSON.stringify(query));
+
+    // Get total count
+    const total = await Project.countDocuments(query);
+    console.log("total projects", total);
+
+    // Get paginated projects
     const projects = await Project.find(query)
       .populate("client teamLead teamMembers")
       .limit(limit * 1)
       .skip((page - 1) * limit)
       .exec();
-    res.json(projects);
+
+    console.log("fetched projects count:", projects.length);
+
+    // Return with pagination metadata
+    res.json({
+      projects,
+      pagination: {
+        currentPage: parseInt(page),
+        totalPages: Math.ceil(total / limit),
+        totalProjects: total,
+        hasNextPage: page * limit < total,
+        hasPrevPage: page > 1,
+      },
+    });
   } catch (err) {
     next(err);
   }
@@ -136,11 +165,64 @@ const deleteProject = async (req, res, next) => {
     next(err);
   }
 };
+const getAllTimeEntries = async (req, res) => {
+  const userId = req.user.id;
+  const { projectId, dateFrom, dateTo, page = 1, limit = 20 } = req.query;
 
+  const query = { user: userId };
+  if (projectId) query.project = projectId;
+  if (dateFrom || dateTo) {
+    query.date = {};
+    if (dateFrom) query.date.$gte = new Date(dateFrom);
+    if (dateTo) query.date.$lte = new Date(dateTo);
+  }
+
+  const timeEntries = await TimeEntry.find(query)
+    .populate("project", "name")
+    .populate("user", "name")
+    .skip((page - 1) * limit)
+    .limit(Number(limit))
+    .lean();
+
+  const total = await TimeEntry.countDocuments(query);
+
+  res.status(200).json({
+    timeEntries,
+    pagination: { page: Number(page), limit: Number(limit), total },
+  });
+};
+
+const getAllTasks = async (req, res) => {
+  const userId = req.user.id;
+  const { projectId, priority, status, page = 1, limit = 20 } = req.query;
+
+  const query = {
+    $or: [{ assignedTo: userId }, { "subtasks.assignees": userId }],
+  };
+  if (projectId) query.project = projectId;
+  if (priority) query.priority = priority;
+  if (status) query.status = status;
+
+  const tasks = await Task.find(query)
+    .populate("project", "name")
+    .populate("assignedTo", "name")
+    .skip((page - 1) * limit)
+    .limit(Number(limit))
+    .lean();
+
+  const total = await Task.countDocuments(query);
+
+  res.status(200).json({
+    tasks,
+    pagination: { page: Number(page), limit: Number(limit), total },
+  });
+};
 module.exports = {
+  getAllTimeEntries,
   addProject,
   getProjects,
   getProject,
   updateProject,
   deleteProject,
+  getAllTasks,
 };

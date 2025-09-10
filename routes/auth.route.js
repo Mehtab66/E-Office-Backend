@@ -1,5 +1,9 @@
 const express = require("express");
-const { login, updatePassword } = require("../controllers/auth.controller");
+const {
+  login,
+  updatePassword,
+  getCurrentUser,
+} = require("../controllers/auth.controller");
 const authMiddleware = require("../middlewares/auth.middleware");
 
 const router = express.Router();
@@ -10,5 +14,6 @@ router.patch(
   authMiddleware(["admin", "manager", "employee"]),
   updatePassword
 );
+router.get("/me", authMiddleware(["manager", "employee"]), getCurrentUser);
 
 module.exports = router;

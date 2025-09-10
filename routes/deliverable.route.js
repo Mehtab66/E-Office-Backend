@@ -21,4 +21,4 @@ router
   .put(authMiddleware(["manager", "employee"]), updateDeliverable)
   .delete(authMiddleware(["manager", "employee"]), deleteDeliverable);
 
-module.exports = router; // ✅ correct
+module.exports = router;
