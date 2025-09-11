@@ -192,6 +192,7 @@ const getAllTimeEntries = async (req, res) => {
   });
 };
 
+
 const getAllTasks = async (req, res) => {
   const userId = req.user.id;
   const { projectId, priority, status, page = 1, limit = 20 } = req.query;
@@ -199,23 +200,35 @@ const getAllTasks = async (req, res) => {
   const query = {
     $or: [{ assignedTo: userId }, { "subtasks.assignees": userId }],
   };
-  if (projectId) query.project = projectId;
+
+  // Validate projectId if provided
+  if (projectId) {
+    if (!mongoose.isValidObjectId(projectId)) {
+      return res.status(400).json({ error: "Invalid project ID" });
+    }
+    query.project = projectId;
+  }
+
   if (priority) query.priority = priority;
   if (status) query.status = status;
 
-  const tasks = await Task.find(query)
-    .populate("project", "name")
-    .populate("assignedTo", "name")
-    .skip((page - 1) * limit)
-    .limit(Number(limit))
-    .lean();
+  try {
+    const tasks = await Task.find(query)
+      .populate("project", "name")
+      .populate("assignedTo", "name")
+      .skip((page - 1) * limit)
+      .limit(Number(limit))
+      .lean();
 
-  const total = await Task.countDocuments(query);
+    const total = await Task.countDocuments(query);
 
-  res.status(200).json({
-    tasks,
-    pagination: { page: Number(page), limit: Number(limit), total },
-  });
+    res.status(200).json({
+      tasks,
+      pagination: { page: Number(page), limit: Number(limit), total },
+    });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
 };
 module.exports = {
   getAllTimeEntries,
