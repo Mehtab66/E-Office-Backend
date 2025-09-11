@@ -1,3 +1,4 @@
+// backend models/deliverable.model.js (updated schema)
 const mongoose = require("mongoose");
 
 const deliverableSchema = new mongoose.Schema(
@@ -21,6 +22,12 @@ const deliverableSchema = new mongoose.Schema(
       type: mongoose.Schema.Types.ObjectId,
       ref: "User",
       required: true,
+    },
+    parent: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: "Deliverable",
+      required: false,
+      default: null,
     },
   },
   { timestamps: true }
