@@ -1,6 +1,8 @@
 const jwt = require("jsonwebtoken");
 
 const authMiddleware = (allowedRoles) => {
+  console.log("Allowed Roles",allowedRoles);
+  
   return (req, res, next) => {
     console.log("Middleware invoked for:", req.method, req.url); // Debug: Log request details
     const authHeader = req.header("Authorization");

@@ -15,7 +15,7 @@ const router = express.Router();
 // Existing project-specific routes
 router.get("/", authMiddleware(["manager", "employee"]), getTasks);
 router.get("/:taskId", authMiddleware(["manager", "employee"]), getTask);
-router.post("/", authMiddleware(["manager"]), createTask);
+router.post("/", authMiddleware(["manager", "employee"]), createTask);
 router.put("/:taskId", authMiddleware(["manager"]), updateTask);
 router.delete("/:taskId", authMiddleware(["manager"]), deleteTask);
 router.post("/:taskId/subtasks", authMiddleware(["manager"]), createSubtask);
