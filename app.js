@@ -1,3 +1,70 @@
+// require("dotenv").config();
+
+// var createError = require("http-errors");
+// var express = require("express");
+// var path = require("path");
+// var cookieParser = require("cookie-parser");
+// var logger = require("morgan");
+// const db = require("./config/db");
+// var indexRouter = require("./routes/index");
+// var usersRouter = require("./routes/users");
+// var adminRouter = require("./routes/admin.route");
+// const authRoutes = require("./routes/auth.route");
+// const clientRoutes = require("./routes/client.route");
+// const projectRoutes = require("./routes/project.route");
+// const taskRoutes = require("./routes/task.route");
+// const timeEntryRoutes = require("./routes/timeEntry.route");
+// const deliverableRoutes = require("./routes/deliverable.route");
+// const managerRoutes = require("./routes/manager.route"); // <-- manager
+// const employeeRoutes = require("./routes/employee.route");
+// const cors = require("cors");
+
+// var app = express();
+
+// // view engine setup
+// app.set("views", path.join(__dirname, "views"));
+// app.set("view engine", "jade");
+
+// app.use(logger("dev"));
+// app.use(express.json());
+// app.use(express.urlencoded({ extended: false }));
+// app.use(cookieParser());
+// app.use(express.static(path.join(__dirname, "public")));
+// db;
+// app.use(cors());
+
+// app.use("/", indexRouter);
+// app.use("/users", usersRouter);
+// app.use("/admin", adminRouter);
+// app.use("/auth", authRoutes);
+// app.use("/api/clients", clientRoutes);
+// app.use("/api/projects", projectRoutes);
+// app.use("/api/projects/:projectId/tasks", taskRoutes);
+// app.use("/api/projects/:projectId/time-entries", timeEntryRoutes);
+// app.use("/api/projects/:projectId/deliverables", deliverableRoutes);
+// app.use("/manager", managerRoutes); // manager routes
+// app.use("/employee", employeeRoutes); // employee routes
+
+// // catch 404 and forward to error handler
+// app.use(function (req, res, next) {
+//   next(createError(404));
+// });
+
+// // error handler
+// app.use(function (err, req, res, next) {
+//   // set locals, only providing error in development
+//   res.locals.message = err.message;
+//   res.locals.error = req.app.get("env") === "development" ? err : {};
+
+//   // render the error page
+//   res.status(err.status || 500);
+//   res.render("error");
+// });
+// app.listen(3000, () => {
+//   console.log('Server is running on port 3000');
+// });
+
+// module.exports = app;
 require("dotenv").config();
 
 var createError = require("http-errors");
@@ -6,18 +73,27 @@ var path = require("path");
 var cookieParser = require("cookie-parser");
 var logger = require("morgan");
 const db = require("./config/db");
+
+// --- Route Imports ---
 var indexRouter = require("./routes/index");
 var usersRouter = require("./routes/users");
 var adminRouter = require("./routes/admin.route");
 const authRoutes = require("./routes/auth.route");
 const clientRoutes = require("./routes/client.route");
-const projectRoutes = require("./routes/project.route");
-const taskRoutes = require("./routes/task.route");
-const timeEntryRoutes = require("./routes/timeEntry.route");
-const deliverableRoutes = require("./routes/deliverable.route");
+const projectRoutes = require("./routes/project.route"); // This now handles nested routes
+// const taskRoutes = require("./routes/task.route"); // No longer needed here
+// const timeEntryRoutes = require("./routes/timeEntry.route"); // No longer needed here
+// const deliverableRoutes = require("./routes/deliverable.route"); // No longer needed here
 const managerRoutes = require("./routes/manager.route"); // <-- manager
 const employeeRoutes = require("./routes/employee.route");
 const cors = require("cors");
+
+// --- Controller and Middleware Imports for Global Routes ---
+const authMiddleware = require("./middlewares/auth.middleware");
+const {
+  getAllTimeEntries,
+  getAllTasks,
+} = require("./controllers/project.controller");
 
 var app = express();
 
@@ -33,17 +109,40 @@ app.use(express.static(path.join(__dirname, "public")));
 db;
 app.use(cors());
 
+// --- API Routes ---
 app.use("/", indexRouter);
 app.use("/users", usersRouter);
 app.use("/admin", adminRouter);
 app.use("/auth", authRoutes);
 app.use("/api/clients", clientRoutes);
+
+// This single line now handles all project-specific routes,
+// including /api/projects/:projectId/tasks
 app.use("/api/projects", projectRoutes);
-app.use("/api/projects/:projectId/tasks", taskRoutes);
-app.use("/api/projects/:projectId/time-entries", timeEntryRoutes);
-app.use("/api/projects/:projectId/deliverables", deliverableRoutes);
+
+// --- REMOVED THESE LINES ---
+// app.use("/api/projects/:projectId/tasks", taskRoutes);
+// app.use("/api/projects/:projectId/time-entries", timeEntryRoutes);
+// app.use("/api/projects/:projectId/deliverables", deliverableRoutes);
+// ---
+
 app.use("/manager", managerRoutes); // manager routes
 app.use("/employee", employeeRoutes); // employee routes
+
+// --- ADDED GLOBAL ROUTES ---
+app.get(
+  "/api/global/tasks",
+  authMiddleware(["manager", "employee"]),
+  getAllTasks
+);
+
+app.get(
+  "/api/global/time-entries",
+  authMiddleware(["manager", "employee"]),
+  getAllTimeEntries
+);
+
+// --- Error Handlers ---
 
 // catch 404 and forward to error handler
 app.use(function (req, res, next) {
@@ -61,7 +160,7 @@ app.use(function (err, req, res, next) {
   res.render("error");
 });
 app.listen(3000, () => {
-  console.log('Server is running on port 3000');
+  console.log("Server is running on port 3000");
 });
 
 module.exports = app;

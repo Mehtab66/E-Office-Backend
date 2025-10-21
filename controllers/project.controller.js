@@ -4,6 +4,7 @@ const User = require("../models/employee.model");
 const TimeEntry = require("../models/timeEntry.model");
 const Task = require("../models/task.model");
 const { validateProject } = require("../validators/project.validator");
+const mongoose = require('mongoose');
 
 const addProject = async (req, res, next) => {
   try {
@@ -165,59 +166,76 @@ const deleteProject = async (req, res, next) => {
     next(err);
   }
 };
-const getAllTimeEntries = async (req, res) => {
-  const userId = req.user.id;
-  const { projectId, dateFrom, dateTo, page = 1, limit = 20 } = req.query;
+const getAllTimeEntries = async (req, res, next) => {
+  try { // Added try...catch
+    const userId = req.user.id; // Assuming user ID is needed based on your logic
+    const { projectId, page = 1, limit = 20 } = req.query;
 
-  const query = { user: userId };
-  if (projectId) query.project = projectId;
-  if (dateFrom || dateTo) {
-    query.date = {};
-    if (dateFrom) query.date.$gte = new Date(dateFrom);
-    if (dateTo) query.date.$lte = new Date(dateTo);
+    // Base query (adjust based on your schema, e.g., filter by user)
+    const query = { /* user: userId */ }; // Example: Filter by user
+
+    if (projectId) {
+      // VALIDATE projectId
+      if (!mongoose.isValidObjectId(projectId)) {
+        console.warn("getAllTimeEntries: Invalid projectId format received:", projectId);
+        return res.status(400).json({ error: "Invalid projectId format sent" });
+      }
+      // Add to query ONLY if valid
+      query.project = projectId;
+    }
+
+    const timeEntries = await TimeEntry.find(query)
+      .populate("project", "name") // Populate project name
+      // .populate("user", "name") // Optionally populate user name
+      .skip((page - 1) * limit)
+      .limit(Number(limit))
+      .sort({ date: -1 }) // Example sort
+      .lean();
+
+    const total = await TimeEntry.countDocuments(query);
+
+    res.status(200).json({
+      timeEntries,
+      pagination: { page: Number(page), limit: Number(limit), total },
+    });
+  } catch (err) {
+    console.error("Error in getAllTimeEntries:", err); // Log the actual error
+    next(err); // Pass errors to Express error handler
   }
-
-  const timeEntries = await TimeEntry.find(query)
-    .populate("project", "name")
-    .populate("user", "name")
-    .skip((page - 1) * limit)
-    .limit(Number(limit))
-    .lean();
-
-  const total = await TimeEntry.countDocuments(query);
-
-  res.status(200).json({
-    timeEntries,
-    pagination: { page: Number(page), limit: Number(limit), total },
-  });
 };
 
 
-const getAllTasks = async (req, res) => {
-  const userId = req.user.id;
-  const { projectId, priority, status, page = 1, limit = 20 } = req.query;
+// --- Corrected getAllTasks ---
+const getAllTasks = async (req, res, next) => {
+ try { // Added try...catch
+    const userId = req.user.id;
+    const { projectId, priority, status, page = 1, limit = 20 } = req.query;
 
-  const query = {
-    $or: [{ assignedTo: userId }, { "subtasks.assignees": userId }],
-  };
+    // Base query for tasks assigned to the user or their subtasks
+    const query = {
+      $or: [{ assignedTo: userId }, { "subtasks.assignees": userId }],
+    };
 
-  // Validate projectId if provided
-  if (projectId) {
-    if (!mongoose.isValidObjectId(projectId)) {
-      return res.status(400).json({ error: "Invalid project ID" });
+    if (projectId) {
+      // VALIDATE projectId
+      if (!mongoose.isValidObjectId(projectId)) {
+        console.warn("getAllTasks: Invalid projectId format received:", projectId);
+        return res.status(400).json({ error: "Invalid projectId format sent" });
+      }
+      // Add to query ONLY if valid
+      query.project = projectId;
     }
-    query.project = projectId;
-  }
 
-  if (priority) query.priority = priority;
-  if (status) query.status = status;
+    // Add other filters if they exist
+    if (priority) query.priority = priority;
+    if (status) query.status = status;
 
-  try {
     const tasks = await Task.find(query)
       .populate("project", "name")
       .populate("assignedTo", "name")
       .skip((page - 1) * limit)
       .limit(Number(limit))
+      .sort({ createdAt: -1 }) // Example sort
       .lean();
 
     const total = await Task.countDocuments(query);
@@ -226,8 +244,9 @@ const getAllTasks = async (req, res) => {
       tasks,
       pagination: { page: Number(page), limit: Number(limit), total },
     });
-  } catch (err) {
-    res.status(500).json({ error: err.message });
+  } catch(err) {
+    console.error("Error in getAllTasks:", err); // Log the actual error
+    next(err); // Pass errors to Express error handler
   }
 };
 module.exports = {

@@ -4,6 +4,7 @@ const validateTask = (data) => {
   const schema = Joi.object({
     title: Joi.string().required(),
     description: Joi.string().allow(''),
+    assignedTo: Joi.string().hex().length(24).allow('').optional(),
     assignees: Joi.array().items(Joi.string().hex().length(24)).optional(), // Updated
     priority: Joi.string().valid('urgent', 'high', 'medium', 'low').default('medium'),
     status: Joi.string().valid('todo', 'in_progress', 'done').default('todo'),
