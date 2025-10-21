@@ -8,7 +8,7 @@ const mongoose = require('mongoose');
 
 const addProject = async (req, res, next) => {
   try {
-    const { error } = validateProject(req.body);
+    const { error }=validateProject(req.body);
     if (error) return res.status(400).json({ error: error.details[0].message });
 
     const { client, teamLead, teamMembers } = req.body;
