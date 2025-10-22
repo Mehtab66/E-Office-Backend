@@ -64,10 +64,7 @@ const createTask = async (req, res, next) => {
       const member = await User.findById(assignedTo);
       if (
         !member || // Check if the assigned user exists
-        // --- TEMPORARILY COMMENTED OUT: Allows assignment regardless of role ---
-        // (member.role !== "team_member" && 
-        //  member.role !== "manager" && 
-        //  member.role !== "team_lead") || // Add any other valid roles here
+       
         // ----------------------------------------------------------------------
         !project.teamMembers.includes(assignedTo) // Check if user is in project team
       ) {
