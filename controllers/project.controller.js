@@ -119,37 +119,71 @@ const getProject = async (req, res, next) => {
   }
 };
 
+// const updateProject = async (req, res, next) => {
+//   try {
+//     const { error } = validateProject(req.body);
+//     if (error) return res.status(400).json({ error: error.details[0].message });
+
+//     const { teamLead, teamMembers } = req.body;
+//     if (teamLead) {
+//       const lead = await User.findById(teamLead);
+//       if (!lead || !["team_lead", "manager"].includes(lead.role))
+//         return res.status(400).json({ error: "Invalid team lead" });
+//     }
+//     if (teamMembers) {
+//       const members = await User.find({
+//         _id: { $in: teamMembers },
+//         role: "team_member",
+//       });
+//       if (members.length !== teamMembers.length)
+//         return res.status(400).json({ error: "Invalid team members" });
+//     }
+
+//     const project = await Project.findByIdAndUpdate(req.params.id, req.body, {
+//       new: true,
+//       runValidators: true,
+//     }).populate("client teamLead teamMembers");
+//     if (!project) return res.status(404).json({ error: "Project not found" });
+//     res.json(project);
+//   } catch (err) {
+//     next(err);
+//   }
+// };
 const updateProject = async (req, res, next) => {
-  try {
-    const { error } = validateProject(req.body);
-    if (error) return res.status(400).json({ error: error.details[0].message });
+  try {
+    const { error } = validateProject(req.body);
+    if (error) return res.status(400).json({ error: error.details[0].message });
 
-    const { teamLead, teamMembers } = req.body;
-    if (teamLead) {
-      const lead = await User.findById(teamLead);
-      if (!lead || lead.role !== "team_lead")
-        return res.status(400).json({ error: "Invalid team lead" });
-    }
-    if (teamMembers) {
-      const members = await User.find({
-        _id: { $in: teamMembers },
-        role: "team_member",
-      });
-      if (members.length !== teamMembers.length)
-        return res.status(400).json({ error: "Invalid team members" });
-    }
+    const { teamLead, teamMembers } = req.body;
+    if (teamLead && !mongoose.isValidObjectId(teamLead)) {
+      return res.status(400).json({ error: "Invalid team lead ID format" });
+    }
+    if (teamMembers) {
+      for (const memberId of teamMembers) {
+        if (!mongoose.isValidObjectId(memberId)) {
+          return res.status(400).json({ error: "Invalid team member ID format" });
+        }
+      }
+    }
 
-    const project = await Project.findByIdAndUpdate(req.params.id, req.body, {
-      new: true,
-      runValidators: true,
-    }).populate("client teamLead teamMembers");
-    if (!project) return res.status(404).json({ error: "Project not found" });
+    // --- THIS IS THE FIX ---
+    const project = await Project.findByIdAndUpdate(
+      req.params.projectId, // Changed from req.params.id
+      req.body, 
+      {
+        new: true,
+        runValidators: true,
+      }
+    ).populate("client teamLead teamMembers");
+    // --- END OF FIX ---
+
+    if (!project) return res.status(404).json({ error: "Project not found" });
+    
     res.json(project);
-  } catch (err) {
-    next(err);
-  }
+  } catch (err) {
+    next(err);
+  }
 };
-
 const deleteProject = async (req, res, next) => {
   try {
     const project = await Project.findByIdAndDelete(req.params.id);
