@@ -6,18 +6,27 @@
 // var cookieParser = require("cookie-parser");
 // var logger = require("morgan");
 // const db = require("./config/db");
+
+// // --- Route Imports ---
 // var indexRouter = require("./routes/index");
 // var usersRouter = require("./routes/users");
 // var adminRouter = require("./routes/admin.route");
 // const authRoutes = require("./routes/auth.route");
 // const clientRoutes = require("./routes/client.route");
-// const projectRoutes = require("./routes/project.route");
-// const taskRoutes = require("./routes/task.route");
-// const timeEntryRoutes = require("./routes/timeEntry.route");
-// const deliverableRoutes = require("./routes/deliverable.route");
+// const projectRoutes = require("./routes/project.route"); // This now handles nested routes
+// // const taskRoutes = require("./routes/task.route"); // No longer needed here
+// // const timeEntryRoutes = require("./routes/timeEntry.route"); // No longer needed here
+// // const deliverableRoutes = require("./routes/deliverable.route"); // No longer needed here
 // const managerRoutes = require("./routes/manager.route"); // <-- manager
 // const employeeRoutes = require("./routes/employee.route");
 // const cors = require("cors");
+
+// // --- Controller and Middleware Imports for Global Routes ---
+// const authMiddleware = require("./middlewares/auth.middleware");
+// const {
+//   getAllTimeEntries,
+//   getAllTasks,
+// } = require("./controllers/project.controller");
 
 // var app = express();
 
@@ -33,17 +42,40 @@
 // db;
 // app.use(cors());
 
+// // --- API Routes ---
 // app.use("/", indexRouter);
 // app.use("/users", usersRouter);
 // app.use("/admin", adminRouter);
 // app.use("/auth", authRoutes);
 // app.use("/api/clients", clientRoutes);
+
+// // This single line now handles all project-specific routes,
+// // including /api/projects/:projectId/tasks
 // app.use("/api/projects", projectRoutes);
-// app.use("/api/projects/:projectId/tasks", taskRoutes);
-// app.use("/api/projects/:projectId/time-entries", timeEntryRoutes);
-// app.use("/api/projects/:projectId/deliverables", deliverableRoutes);
+
+// // --- REMOVED THESE LINES ---
+// // app.use("/api/projects/:projectId/tasks", taskRoutes);
+// // app.use("/api/projects/:projectId/time-entries", timeEntryRoutes);
+// // app.use("/api/projects/:projectId/deliverables", deliverableRoutes);
+// // ---
+
 // app.use("/manager", managerRoutes); // manager routes
 // app.use("/employee", employeeRoutes); // employee routes
+
+// // --- ADDED GLOBAL ROUTES ---
+// app.get(
+//   "/api/global/tasks",
+//   authMiddleware(["manager", "employee"]),
+//   getAllTasks
+// );
+
+// app.get(
+//   "/api/global/time-entries",
+//   authMiddleware(["manager", "employee"]),
+//   getAllTimeEntries
+// );
+
+// // --- Error Handlers ---
 
 // // catch 404 and forward to error handler
 // app.use(function (req, res, next) {
@@ -60,11 +92,12 @@
 //   res.status(err.status || 500);
 //   res.render("error");
 // });
-// app.listen(3000, () => {
-//   console.log('Server is running on port 3000');
-// });
+// // app.listen(3000, () => {
+// //   console.log("Server is running on port 3000");
+// // });
 
 // module.exports = app;
+
 require("dotenv").config();
 
 var createError = require("http-errors");
@@ -80,10 +113,7 @@ var usersRouter = require("./routes/users");
 var adminRouter = require("./routes/admin.route");
 const authRoutes = require("./routes/auth.route");
 const clientRoutes = require("./routes/client.route");
-const projectRoutes = require("./routes/project.route"); // This now handles nested routes
-// const taskRoutes = require("./routes/task.route"); // No longer needed here
-// const timeEntryRoutes = require("./routes/timeEntry.route"); // No longer needed here
-// const deliverableRoutes = require("./routes/deliverable.route"); // No longer needed here
+const projectRoutes = require("./routes/project.route"); // Handles nested routes
 const managerRoutes = require("./routes/manager.route"); // <-- manager
 const employeeRoutes = require("./routes/employee.route");
 const cors = require("cors");
@@ -116,15 +146,8 @@ app.use("/admin", adminRouter);
 app.use("/auth", authRoutes);
 app.use("/api/clients", clientRoutes);
 
-// This single line now handles all project-specific routes,
-// including /api/projects/:projectId/tasks
+// This single line handles all project-specific routes
 app.use("/api/projects", projectRoutes);
-
-// --- REMOVED THESE LINES ---
-// app.use("/api/projects/:projectId/tasks", taskRoutes);
-// app.use("/api/projects/:projectId/time-entries", timeEntryRoutes);
-// app.use("/api/projects/:projectId/deliverables", deliverableRoutes);
-// ---
 
 app.use("/manager", managerRoutes); // manager routes
 app.use("/employee", employeeRoutes); // employee routes
@@ -158,9 +181,6 @@ app.use(function (err, req, res, next) {
   // render the error page
   res.status(err.status || 500);
   res.render("error");
-});
-app.listen(3000, () => {
-  console.log("Server is running on port 3000");
 });
 
 module.exports = app;
