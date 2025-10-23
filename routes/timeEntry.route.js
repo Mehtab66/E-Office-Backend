@@ -36,7 +36,6 @@
 //   authMiddleware(["manager", "employee"]),
 //   getAllTimeEntries
 // );
-
 // module.exports = router;
 const express = require("express");
 const authMiddleware = require("../middlewares/auth.middleware");
