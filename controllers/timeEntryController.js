@@ -128,32 +128,50 @@ const deleteTimeEntry = async (req, res, next) => {
   }
 };
 
-const getAllTimeEntries = async (req, res) => {
-  const userId = req.user.id;
-  const { projectId, dateFrom, dateTo, page = 1, limit = 20 } = req.query;
+// Paste this into timeEntryController.js, replacing your old function
+const getAllTimeEntries = async (req, res, next) => {
+  try {
+    const { projectId, dateFrom, dateTo, page = 1, limit = 20 } = req.query;
+    const userId = req.user.id;
+    const userRole = req.user.role; // <-- Gets the user's role
 
-  const query = { user: userId };
-  if (projectId) query.project = projectId;
-  if (dateFrom || dateTo) {
-    query.date = {};
-    if (dateFrom) query.date.$gte = new Date(dateFrom);
-    if (dateTo) query.date.$lte = new Date(dateTo);
+    let query = {}; // <-- Starts with an empty query
+
+    // === THIS IS THE CORRECT LOGIC ===
+    if (userRole === "manager") {
+      // If manager, just filter by project (if it exists)
+      if (projectId) {
+        query.project = projectId;
+      }
+      // If no projectId, the query is {}, so manager sees ALL time entries
+    } else {
+      // If employee, ALWAYS filter by their ID
+      query.user = userId;
+      if (projectId) {
+        query.project = projectId; // And by project (if it exists)
+      }
+    }
+    // === END OF LOGIC ===
+
+    const timeEntries = await TimeEntry.find(query)
+      .populate("project", "name")
+      .populate("user", "name") // <-- So you can see *who* submitted it
+      .skip((page - 1) * limit)
+      .limit(Number(limit))
+      .sort({ date: -1 })
+      .lean();
+
+    const total = await TimeEntry.countDocuments(query);
+
+    res.status(200).json({
+      timeEntries,
+      pagination: { page: Number(page), limit: Number(limit), total },
+    });
+  } catch (err) {
+    next(err);
   }
-
-  const timeEntries = await TimeEntry.find(query)
-    .populate("project", "name")
-    .populate("user", "name")
-    .skip((page - 1) * limit)
-    .limit(Number(limit))
-    .lean();
-
-  const total = await TimeEntry.countDocuments(query);
-
-  res.status(200).json({
-    timeEntries,
-    pagination: { page: Number(page), limit: Number(limit), total },
-  });
 };
+
 module.exports = {
   createTimeEntry,
   getTimeEntries,

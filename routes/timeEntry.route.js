@@ -45,6 +45,7 @@ const {
   createTimeEntry,
   updateTimeEntry,
   deleteTimeEntry,
+  getAllTimeEntries
   // Remove getAllTimeEntries, it's handled by the project router
 } = require("../controllers/timeEntryController");
 
@@ -72,12 +73,12 @@ router.delete(
 );
 
 // 2. REMOVE THE DUPLICATE GLOBAL ROUTE
-/*
-router.get(
-  "/global/time-entries",
-  authMiddleware(["manager", "employee"]),
-  getAllTimeEntries
-);
-*/
+
+// router.get(
+//   "/global/time-entries",
+//   authMiddleware(["manager", "employee"]),
+//   getAllTimeEntries
+// );
+
 
 module.exports = router;
