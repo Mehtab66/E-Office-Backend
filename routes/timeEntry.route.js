@@ -39,7 +39,7 @@
 // module.exports = router;
 const express = require("express");
 const authMiddleware = require("../middlewares/auth.middleware");
-const {
+const{
   getTimeEntries,
   getTimeEntry,
   createTimeEntry,
