@@ -1,24 +1,27 @@
 // const express = require("express");
 // const authMiddleware = require("../middlewares/auth.middleware");
-// const {
+// const{
 //   getTimeEntries,
 //   getTimeEntry,
 //   createTimeEntry,
 //   updateTimeEntry,
 //   deleteTimeEntry,
-//   getAllTimeEntries, // Ensure this is imported from timeEntryController.js
+//   getAllTimeEntries
+//   // Remove getAllTimeEntries, it's handled by the project router
 // } = require("../controllers/timeEntryController");
 
-// const router = express.Router();
+// // 1. ADD { mergeParams: true }
+// const router = express.Router({ mergeParams: true });
 
 // // Existing project-specific routes
+// // These are now correct and will get :projectId from the parent
 // router.get("/", authMiddleware(["manager", "employee"]), getTimeEntries);
 // router.get(
 //   "/:timeEntryId",
 //   authMiddleware(["manager", "employee"]),
 //   getTimeEntry
 // );
-// router.post("/", authMiddleware(["manager", "employee"]), createTimeEntry);
+// router.post("/", authMiddleware(["manager", "employee"]), createTimeEntry); // This is the route that was 404ing
 // router.put(
 //   "/:timeEntryId",
 //   authMiddleware(["manager", "employee"]),
@@ -30,55 +33,51 @@
 //   deleteTimeEntry
 // );
 
-// // New route for fetching all time entries across projects
-// router.get(
-//   "/global/time-entries",
-//   authMiddleware(["manager", "employee"]),
-//   getAllTimeEntries
-// );
+// // 2. REMOVE THE DUPLICATE GLOBAL ROUTE
+
+// // router.get(
+// //   "/global/time-entries",
+// //   authMiddleware(["manager", "employee"]),
+// //   getAllTimeEntries
+// // );
+
+
 // module.exports = router;
+
+// routes/timeEntryRoutes.js
 const express = require("express");
 const authMiddleware = require("../middlewares/auth.middleware");
-const{
+const {
+  createTimeEntry,
   getTimeEntries,
   getTimeEntry,
-  createTimeEntry,
   updateTimeEntry,
   deleteTimeEntry,
-  getAllTimeEntries
-  // Remove getAllTimeEntries, it's handled by the project router
+  getAllTimeEntries,
 } = require("../controllers/timeEntryController");
 
-// 1. ADD { mergeParams: true }
+// mergeParams: true so it can receive :projectId when nested under /projects/:projectId
 const router = express.Router({ mergeParams: true });
 
-// Existing project-specific routes
-// These are now correct and will get :projectId from the parent
-router.get("/", authMiddleware(["manager", "employee"]), getTimeEntries);
+// GET list
+// - When mounted under /projects/:projectId/time-entries => req.params.projectId exists => getTimeEntries
+// - When mounted under /time-entries => no projectId => getAllTimeEntries (global)
 router.get(
-  "/:timeEntryId",
+  "/",
   authMiddleware(["manager", "employee"]),
-  getTimeEntry
-);
-router.post("/", authMiddleware(["manager", "employee"]), createTimeEntry); // This is the route that was 404ing
-router.put(
-  "/:timeEntryId",
-  authMiddleware(["manager", "employee"]),
-  updateTimeEntry
-);
-router.delete(
-  "/:timeEntryId",
-  authMiddleware(["manager", "employee"]),
-  deleteTimeEntry
+  (req, res, next) =>
+    req.params.projectId ? getTimeEntries(req, res, next) : getAllTimeEntries(req, res, next)
 );
 
-// 2. REMOVE THE DUPLICATE GLOBAL ROUTE
+// Create project-scoped (requires projectId)
+router.post("/", authMiddleware(["manager", "employee"]), (req, res, next) => {
+  if (!req.params.projectId) return res.status(400).json({ error: "Missing projectId" });
+  return createTimeEntry(req, res, next);
+});
 
-// router.get(
-//   "/global/time-entries",
-//   authMiddleware(["manager", "employee"]),
-//   getAllTimeEntries
-// );
-
+// Single time entry endpoints (projectId optional for read/update/delete because timeEntry has project reference)
+router.get("/:timeEntryId", authMiddleware(["manager", "employee"]), getTimeEntry);
+router.put("/:timeEntryId", authMiddleware(["manager", "employee"]), updateTimeEntry);
+router.delete("/:timeEntryId", authMiddleware(["manager", "employee"]), deleteTimeEntry);
 
 module.exports = router;
