@@ -65,6 +65,14 @@ exports.getManagers = async (req, res, next) => {
 exports.updateUser = async (req, res, next) => {
   try {
     const { id } = req.params;
+    const userId = req.user.id;
+    const userRole = req.user.role;
+
+    // Ensure users can only update their own profile unless they're a manager
+    if (userRole !== "manager" && id !== userId) {
+      return res.status(403).json({ message: "You can only update your own profile" });
+    }
+
     const { error, value } = updateUserSchema.validate(req.body);
     if (error) return res.status(400).json({ message: error.message });
 

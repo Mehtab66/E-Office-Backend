@@ -91,22 +91,41 @@ const updatePassword = async (req, res) => {
 
 const getCurrentUser = async (req, res, next) => {
   try {
-    const user = await Employee.findById(req.user.id).select(
-      "_id name email role designation phone grade cnic projects"
+    const User = require("../models/users.model");
+    const userId = req.user.id;
+    const userRole = req.user.role;
+
+    // Try to find user in Users model first (for managers and employees stored there)
+    let user = await User.findById(userId).select(
+      "_id name email role designation phone grade cnic projects department location bio avatar"
     );
+
+    // If not found in Users model, try Employee model (for employees stored there)
+    if (!user) {
+      user = await Employee.findById(userId).select(
+        "_id name email role designation phone grade cnic projects"
+      );
+    }
+
     if (!user) {
       return res.status(404).json({ message: "User not found" });
     }
+
     res.json({
       id: user._id,
+      _id: user._id,
       name: user.name,
       email: user.email,
-      role: user.role,
-      designation: user.designation,
-      phone: user.phone,
-      grade: user.grade,
-      cnic: user.cnic,
-      projects: user.projects,
+      role: user.role || userRole,
+      designation: user.designation || "",
+      phone: user.phone || "",
+      grade: user.grade || 0,
+      cnic: user.cnic || "",
+      projects: user.projects || [],
+      department: user.department || "",
+      location: user.location || "",
+      bio: user.bio || "",
+      avatar: user.avatar || "",
     });
   } catch (err) {
     next(err);
