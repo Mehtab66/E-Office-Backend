@@ -326,6 +326,7 @@ const deleteTimeEntry = async (req, res, next) => {
 };
 
 // Global GET with filters (unscoped)
+// replace your getAllTimeEntries with this
 const getAllTimeEntries = async (req, res, next) => {
   try {
     const { projectId, dateFrom, dateTo, page = 1, limit = 50 } = req.query;
@@ -333,11 +334,9 @@ const getAllTimeEntries = async (req, res, next) => {
     const userRole = req.user.role;
 
     const query = {};
-
     if (userRole === "manager") {
       if (projectId) query.project = projectId;
     } else {
-      // employee
       query.user = userId;
       if (projectId) query.project = projectId;
     }
@@ -350,12 +349,14 @@ const getAllTimeEntries = async (req, res, next) => {
 
     const [timeEntries, total] = await Promise.all([
       TimeEntry.find(query)
-        .populate("project", "name")
+        // populate multiple possible name fields so frontend can pick one
         .populate("user", "name")
+        .populate("project", "name")
         .sort({ date: -1 })
-        .skip((page - 1) * limit)
+        .skip((Number(page) - 1) * Number(limit))
         .limit(Number(limit))
-        .lean(),
+        .lean()
+        .exec(),
       TimeEntry.countDocuments(query),
     ]);
 
@@ -367,6 +368,7 @@ const getAllTimeEntries = async (req, res, next) => {
     next(err);
   }
 };
+
 
 module.exports = {
   createTimeEntry,
