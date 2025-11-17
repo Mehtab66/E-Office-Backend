@@ -18,5 +18,4 @@ router.get("/managers", usersController.getManagers); // all managers
 router.get("/:id", authMiddleware(["manager", "employee"]), usersController.getUserById); // get user by id
 router.put("/:id", authMiddleware(["manager", "employee"]), usersController.updateUser); // update
 router.delete("/:id", authMiddleware(["manager"]), usersController.deleteUser); // delete
-
 module.exports = router;
