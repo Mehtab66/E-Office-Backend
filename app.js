@@ -17,6 +17,7 @@ const clientRoutes = require("./routes/client.route");
 const projectRoutes = require("./routes/project.route"); // Handles nested routes
 const managerRoutes = require("./routes/manager.route");
 const employeeRoutes = require("./routes/employee.route");
+const analyticsRoutes = require("./routes/analytics.routes");
 
 // --- Controller and Middleware Imports for Global Routes ---
 const authMiddleware = require("./middlewares/auth.middleware");
@@ -58,6 +59,7 @@ app.use("/admin", adminRouter);
 app.use("/auth", authRoutes);
 app.use("/api/clients", clientRoutes);
 app.use("/api/users", usersRoutes);
+app.use("/api/analytics", analyticsRoutes);
 // Mount projects router
 app.use("/api/projects", projectRoutes);
 
