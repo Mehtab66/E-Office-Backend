@@ -28,6 +28,7 @@ const { getAllTimeEntries } = require("./controllers/timeEntryController");
 
 // Import timeEntry router so we can mount it both globally and scoped under projects
 const timeEntryRouter = require("./routes/timeEntry.route");
+const socket = require("./socket");
 
 var app = express();
 
@@ -96,8 +97,10 @@ app.use(function (err, req, res, next) {
 
 // start server (useful when running app.js directly)
 const PORT = process.env.PORT || 3000;
-app.listen(PORT, () => {
+const server = app.listen(PORT, () => {
   console.log(`✅ Server running on http://localhost:${PORT}`);
 });
+
+socket.init(server);
 
 module.exports = app;

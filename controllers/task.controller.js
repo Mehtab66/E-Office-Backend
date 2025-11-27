@@ -3,6 +3,7 @@ const mongoose = require("mongoose");
 const Project = require("../models/project.model");
 const User = require("../models/employee.model");
 const { validateTask } = require("../validators/task.validator");
+const socket = require("../socket");
 
 // const createTask = async (req, res, next) => {
 //   try {
@@ -46,41 +47,55 @@ const { validateTask } = require("../validators/task.validator");
 //   }
 // };
 const createTask = async (req, res, next) => {
-  try {
-    console.log("PROJECT ID FROM PARAMS:", req.params.projectId);
-    const { error } = validateTask(req.body);
-    if (error) return res.status(400).json({ error: error.details[0].message });
+  try {
+    console.log("PROJECT ID FROM PARAMS:", req.params.projectId);
+    const { error } = validateTask(req.body);
+    if (error) return res.status(400).json({ error: error.details[0].message });
 
-    const project = await Project.findById(req.params.projectId);
-    if (!project) return res.status(404).json({ error: "Project not found" });
-    
-    // Check if the user creating the task is authorized
-    if (req.user.role !== "manager" && !project.teamLead.equals(req.user.id)) {
-      return res.status(403).json({ error: "Access denied" });
-    }
+    const project = await Project.findById(req.params.projectId);
+    if (!project) return res.status(404).json({ error: "Project not found" });
 
-    const { assignedTo } = req.body;
-    if (assignedTo && assignedTo !== '') {
-      const member = await User.findById(assignedTo);
-      if (
-        !member || // Check if the assigned user exists
-       
-        // ----------------------------------------------------------------------
-        !project.teamMembers.includes(assignedTo) // Check if user is in project team
-      ) {
-        return res.status(400).json({ error: "Invalid team member" });
-      }
-    }
+    // Check if the user creating the task is authorized
+    if (req.user.role !== "manager" && !project.teamLead.equals(req.user.id)) {
+      return res.status(403).json({ error: "Access denied" });
+    }
 
-    const task = await Task.create({
-      ...req.body,
-      project: req.params.projectId,
-      createdBy: req.user.id,
-    });
-    res.status(201).json(task);
-  } catch (err) {
-    next(err);
-  }
+    const { assignedTo } = req.body;
+    if (assignedTo && assignedTo !== '') {
+      const member = await User.findById(assignedTo);
+      if (
+        !member || // Check if the assigned user exists
+
+        // ----------------------------------------------------------------------
+        !project.teamMembers.includes(assignedTo) // Check if user is in project team
+      ) {
+        return res.status(400).json({ error: "Invalid team member" });
+      }
+    }
+
+    const task = await Task.create({
+      ...req.body,
+      project: req.params.projectId,
+      createdBy: req.user.id,
+    });
+
+    // Emit notification to the assigned user
+    if (assignedTo) {
+      const io = socket.getIo();
+      const userSocketId = socket.getUserSocketId(assignedTo);
+      if (userSocketId) {
+        io.to(userSocketId).emit("new_task", {
+          message: `New task assigned: ${task.title}`,
+          task: task,
+        });
+        console.log(`Notification sent to user ${assignedTo}`);
+      }
+    }
+
+    res.status(201).json(task);
+  } catch (err) {
+    next(err);
+  }
 };
 const getTasks = async (req, res, next) => {
   try {
