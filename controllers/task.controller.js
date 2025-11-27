@@ -2,6 +2,7 @@ const Task = require("../models/task.model");
 const mongoose = require("mongoose");
 const Project = require("../models/project.model");
 const User = require("../models/employee.model");
+const Notification = require("../models/notification.model");
 const { validateTask } = require("../validators/task.validator");
 const socket = require("../socket");
 
@@ -81,12 +82,21 @@ const createTask = async (req, res, next) => {
 
     // Emit notification to the assigned user
     if (assignedTo) {
+      // Save notification to database
+      const notification = await Notification.create({
+        recipient: assignedTo,
+        message: `New task assigned: ${task.title}`,
+        type: "info",
+        relatedId: task._id,
+      });
+
       const io = socket.getIo();
       const userSocketId = socket.getUserSocketId(assignedTo);
       if (userSocketId) {
         io.to(userSocketId).emit("new_task", {
-          message: `New task assigned: ${task.title}`,
+          message: notification.message,
           task: task,
+          notification: notification, // Send the full notification object
         });
         console.log(`Notification sent to user ${assignedTo}`);
       }
