@@ -7,7 +7,7 @@ const authMiddleware = require("../middlewares/auth.middleware");
 router.use(authMiddleware(["manager", "employee", "admin"]));
 
 router.get("/", notificationController.getNotifications);
-router.put("/:id/read", notificationController.markAsRead);
 router.put("/read-all", notificationController.markAllAsRead);
+router.put("/:id/read", notificationController.markAsRead);
 
 module.exports = router;

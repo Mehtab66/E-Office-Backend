@@ -85,7 +85,7 @@ const createTask = async (req, res, next) => {
       // Save notification to database
       const notification = await Notification.create({
         recipient: assignedTo,
-        message: `New task assigned: ${task.title}`,
+        message: `New Task Assigned: ${task.title}`,
         type: "info",
         relatedId: task._id,
       });
@@ -270,7 +270,41 @@ const createSubtask = async (req, res, next) => {
     await task.save();
 
     // Return the newly created subtask
-    res.status(201).json(task.subtasks[task.subtasks.length - 1]);
+    const createdSubtask = task.subtasks[task.subtasks.length - 1];
+
+    // Populate assignees for the response and notification
+    let populatedSubtask = createdSubtask.toObject();
+    if (assignees && assignees.length > 0) {
+      const assigneesList = await User.find({ _id: { $in: assignees } }, "name email firstName lastName");
+      populatedSubtask.assignees = assigneesList;
+    }
+
+    // Emit notification to assigned users
+    if (assignees && assignees.length > 0) {
+      for (const assigneeId of assignees) {
+        // Save notification to database
+        const notification = await Notification.create({
+          recipient: assigneeId,
+          message: `New Subtask Assigned: ${title} (Parent: ${task.title})`,
+          type: "info",
+          relatedId: createdSubtask._id,
+        });
+
+        const io = socket.getIo();
+        const userSocketId = socket.getUserSocketId(assigneeId);
+        if (userSocketId) {
+          io.to(userSocketId).emit("new_task", {
+            message: notification.message,
+            task: task, // Sending parent task context
+            subtask: populatedSubtask, // Send populated subtask
+            notification: notification,
+          });
+          console.log(`Notification sent to user ${assigneeId} for subtask`);
+        }
+      }
+    }
+
+    res.status(201).json(populatedSubtask);
 
   } catch (err) { // 1. Added catch block
     next(err); // Pass error to Express error handler
