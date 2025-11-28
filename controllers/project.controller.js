@@ -4,11 +4,13 @@ const User = require("../models/employee.model");
 const TimeEntry = require("../models/timeEntry.model");
 const Task = require("../models/task.model");
 const { validateProject } = require("../validators/project.validator");
+const Notification = require("../models/notification.model");
+const socket = require("../socket");
 const mongoose = require('mongoose');
 
 const addProject = async (req, res, next) => {
   try {
-    const { error }=validateProject(req.body);
+    const { error } = validateProject(req.body);
     if (error) return res.status(400).json({ error: error.details[0].message });
 
     const { client, teamLead, teamMembers } = req.body;
@@ -48,6 +50,56 @@ const addProject = async (req, res, next) => {
       { _id: { $in: userIds } },
       { $push: { projects: project._id } }
     );
+
+    // --- NOTIFICATION LOGIC ---
+    const io = socket.getIo();
+
+    // 1. Notify Team Members
+    if (teamMembers && teamMembers.length > 0) {
+      for (const memberId of teamMembers) {
+        const message = `You are taken as a team member in this project: ${project.name}`;
+
+        // Create persistent notification
+        const notification = await Notification.create({
+          recipient: memberId,
+          message: message,
+          type: "info",
+          relatedId: project._id,
+        });
+
+        // Emit socket event
+        const userSocketId = socket.getUserSocketId(memberId);
+        if (userSocketId) {
+          io.to(userSocketId).emit("new_task", { // Reusing 'new_task' listener on frontend for simplicity
+            message: message,
+            notification: notification,
+          });
+        }
+      }
+    }
+
+    // 2. Notify Team Lead
+    if (teamLead) {
+      const message = `You will lead this Project: ${project.name}`;
+
+      // Create persistent notification
+      const notification = await Notification.create({
+        recipient: teamLead,
+        message: message,
+        type: "info",
+        relatedId: project._id,
+      });
+
+      // Emit socket event
+      const userSocketId = socket.getUserSocketId(teamLead);
+      if (userSocketId) {
+        io.to(userSocketId).emit("new_task", { // Reusing 'new_task' listener on frontend
+          message: message,
+          notification: notification,
+        });
+      }
+    }
+    // --------------------------
 
     res.status(201).json({ message: "Project added successfully", project });
   } catch (err) {
@@ -150,39 +202,39 @@ const getProject = async (req, res, next) => {
 //   }
 // };
 const updateProject = async (req, res, next) => {
-  try {
-    const { error } = validateProject(req.body);
-    if (error) return res.status(400).json({ error: error.details[0].message });
+  try {
+    const { error } = validateProject(req.body);
+    if (error) return res.status(400).json({ error: error.details[0].message });
 
-    const { teamLead, teamMembers } = req.body;
-    if (teamLead && !mongoose.isValidObjectId(teamLead)) {
-      return res.status(400).json({ error: "Invalid team lead ID format" });
-    }
-    if (teamMembers) {
-      for (const memberId of teamMembers) {
-        if (!mongoose.isValidObjectId(memberId)) {
-          return res.status(400).json({ error: "Invalid team member ID format" });
-        }
-      }
-    }
+    const { teamLead, teamMembers } = req.body;
+    if (teamLead && !mongoose.isValidObjectId(teamLead)) {
+      return res.status(400).json({ error: "Invalid team lead ID format" });
+    }
+    if (teamMembers) {
+      for (const memberId of teamMembers) {
+        if (!mongoose.isValidObjectId(memberId)) {
+          return res.status(400).json({ error: "Invalid team member ID format" });
+        }
+      }
+    }
 
     // --- THIS IS THE FIX ---
-    const project = await Project.findByIdAndUpdate(
+    const project = await Project.findByIdAndUpdate(
       req.params.projectId, // Changed from req.params.id
-      req.body, 
+      req.body,
       {
-        new: true,
-        runValidators: true,
-      }
+        new: true,
+        runValidators: true,
+      }
     ).populate("client teamLead teamMembers");
     // --- END OF FIX ---
 
-    if (!project) return res.status(404).json({ error: "Project not found" });
-    
+    if (!project) return res.status(404).json({ error: "Project not found" });
+
     res.json(project);
-  } catch (err) {
-    next(err);
-  }
+  } catch (err) {
+    next(err);
+  }
 };
 const deleteProject = async (req, res, next) => {
   try {
@@ -241,7 +293,7 @@ const getAllTimeEntries = async (req, res, next) => {
 
 // --- Corrected getAllTasks ---
 const getAllTasks = async (req, res, next) => {
- try { // Added try...catch
+  try { // Added try...catch
     const userId = req.user.id;
     const { projectId, priority, status, page = 1, limit = 20 } = req.query;
 
@@ -278,7 +330,7 @@ const getAllTasks = async (req, res, next) => {
       tasks,
       pagination: { page: Number(page), limit: Number(limit), total },
     });
-  } catch(err) {
+  } catch (err) {
     console.error("Error in getAllTasks:", err); // Log the actual error
     next(err); // Pass errors to Express error handler
   }
