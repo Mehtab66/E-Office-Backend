@@ -74,6 +74,7 @@ const getUsers = async (req, res) => {
       page = 1,
       limit = 10,
       sort = "-createdAt",
+      role,
     } = req.query;
     const query = {
       $or: [
@@ -83,6 +84,10 @@ const getUsers = async (req, res) => {
         { department: { $regex: search, $options: "i" } },
       ],
     };
+
+    if (role) {
+      query.role = role;
+    }
 
     const users = await User.find(query)
       .skip((page - 1) * limit)
